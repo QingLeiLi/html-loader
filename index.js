@@ -53,7 +53,7 @@ module.exports = function(content) {
 	content = [content];
 	links.forEach(function(link) {
 		if(!loaderUtils.isUrlRequest(link.value, root)) return;
-		
+
 		if (link.value.indexOf('mailto:') > -1 ) return;
 
 		var uri = url.parse(link.value);
@@ -134,17 +134,30 @@ module.exports = function(content) {
 		content = JSON.stringify(content);
 	}
 
-    var exportsString = "module.exports = ";
+	var exportsString = "module.exports = ";
 	if (config.exportAsDefault) {
-        exportsString = "exports.default = ";
+		exportsString = "exports.default = ";
 
 	} else if (config.exportAsEs6Default) {
-        exportsString = "export default ";
+		exportsString = "export default ";
 	}
 
- 	return exportsString + content.replace(/xxxHTMLLINKxxx[0-9\.]+xxx/g, function(match) {
+	// save the alias( webpack option-resolve-alias) key
+	var moduleAlias = this.options.resolve && this.options.resolve.alias,
+		aliases = [],
+		alias;
+	if( undefined !== moduleAlias){
+		aliases = Object.keys( moduleAlias );
+	}
+
+	return exportsString + content.replace(/xxxHTMLLINKxxx[0-9\.]+xxx/g, function(match) {
 		if(!data[match]) return match;
-		return '" + require(' + JSON.stringify(loaderUtils.urlToRequest(data[match], root)) + ') + "';
+		alias = aliases.find(function( alias ){
+			return data[match].startsWith( alias );
+		});
+
+		// if url startwith one of the alias, consider it is no need to modify
+		return '" + require(' + JSON.stringify( alias === undefined ? loaderUtils.urlToRequest(data[match], root) : data[match] ) + ') + "';
 	}) + ";";
 
 }
